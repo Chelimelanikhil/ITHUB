@@ -1,8 +1,10 @@
-import React, { useState ,useEffect} from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ToastAndroid, ActivityIndicator, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import {useNavigation } from "expo-router";
+import { useNavigation } from 'expo-router';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -10,30 +12,71 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // Loading state
+  const [isCompany, setIsCompany] = useState(false); // Track if the user is a company or not
   const navigation = useNavigation();
+
   useEffect(() => {
     navigation.setOptions({
       headerShown: true,
       headerTransparent: true,
-      headerTitle: "",
+      headerTitle: '',
     });
   }, []);
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (!name || !email || !password || !confirmPassword) {
-      Alert.alert('Validation Error', 'Please fill in all fields');
+      ToastAndroid.show('Please fill in all fields', ToastAndroid.SHORT);
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Password Error', 'Passwords do not match');
+      ToastAndroid.show('Passwords do not match', ToastAndroid.SHORT);
       return;
     }
 
-    // Perform registration logic (e.g., API call) and then navigate to login or tabs
-    // For example, after successful registration:
-    router.replace('/auth/login');
+    setIsLoading(true);  // Show loader while the registration process is in progress
+
+    try {
+      // Call the backend API to register the user
+      const response = await axios.post('http://localhost:5000/api/auth/register', {
+        name,
+        email,
+        password,
+        role: isCompany ? 'company' : 'user', 
+      });
+    
+      // Check if registration was successful
+      if (response.data.message === 'User registered successfully') {
+        await AsyncStorage.setItem('token', response.data.token);
+        await AsyncStorage.setItem('role', response.data.role); 
+        // If the role is company, navigate to the onboarding screen
+        if (response.data.role === 'company') {
+          router.replace('/onboard/onboard'); // Navigate to the onboarding screen
+        } else {
+          // Otherwise, navigate to the login page
+          router.replace('/auth/login'); // Navigate to the login page
+        }
+    
+        // You can show a success message here, for example:
+        // ToastAndroid.show('Registration successful', ToastAndroid.SHORT);
+      } else {
+        // Show the error message from the backend
+        // ToastAndroid.show(response.data.message || 'Registration failed', ToastAndroid.SHORT);
+      }
+    } catch (error) {
+      if (error.response && error.response.data && error.response.data.message) {
+        // Handle specific backend error messages like "Email already exists"
+        // ToastAndroid.show(error.response.data.message, ToastAndroid.SHORT);
+      } else {
+        // Handle general network error
+        // ToastAndroid.show('Network error. Please try again later.', ToastAndroid.SHORT);
+      }
+    } finally {
+      setIsLoading(false);  // Hide loader after registration process completes
+    }    
   };
+
 
   return (
     <View style={styles.container}>
@@ -82,9 +125,22 @@ export default function RegisterScreen() {
         />
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleRegister}>
-        <Text style={styles.buttonText}>Register</Text>
+      {/* Toggle for selecting Role */}
+      <View style={styles.toggleContainer}>
+        <Text style={styles.toggleText}>Are you a company?</Text>
+        <Switch
+          value={isCompany}
+          onValueChange={setIsCompany}
+          trackColor={{ false: '#767577', true: '#81b0ff' }}
+          thumbColor={isCompany ? '#f5dd4b' : '#f4f3f4'}
+        />
+      </View>
+
+      <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={isLoading}>
+        <Text style={styles.buttonText}> {isLoading ? 'Signing Up...' : 'Sign Up'} </Text>
       </TouchableOpacity>
+
+    
 
       <View style={styles.footer}>
         <TouchableOpacity onPress={() => router.replace('/auth/login')}>
@@ -143,6 +199,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
+  loader: {
+    marginTop: 20,
+  },
   footer: {
     marginTop: 20,
     alignItems: 'center',
@@ -151,5 +210,15 @@ const styles = StyleSheet.create({
     color: '#007bff',
     fontSize: 16,
     marginBottom: 10,
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  toggleText: {
+    fontSize: 16,
+    color: '#333',
+    marginRight: 10,
   },
 });

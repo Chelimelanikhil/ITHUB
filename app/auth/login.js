@@ -1,14 +1,18 @@
-import React, { useState,useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity,ActivityIndicator, ToastAndroid, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import {useNavigation } from "expo-router";
+import { useNavigation } from "expo-router";
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigation = useNavigation();
+
   useEffect(() => {
     navigation.setOptions({
       headerShown: true,
@@ -17,13 +21,48 @@ export default function LoginScreen() {
     });
   }, []);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (email && password) {
-      
-      router.replace('/(tabs)');
+      setIsLoading(true);
+      try {
+        // Make the login request to the backend API
+        const response = await axios.post('http://localhost:5000/api/auth/login', {
+          email,
+          password,
+        });
+
+        // Check if the response contains a token
+        if (response.data.token) {
+          // Store the token in AsyncStorage
+          await AsyncStorage.setItem('token', response.data.token);
+          await AsyncStorage.setItem('role', response.data.role); 
+          // Show success message
+          //ToastAndroid.show('Login successful', ToastAndroid.SHORT);
+          if (response.data.role === 'user') {
+            router.replace('/(tabs)');
+          } else{
+            router.replace('/company/company');
+          } ;
+          // Navigate to the main app or dashboard
+        
+        } else {
+          //ToastAndroid.show('Invalid response from server', ToastAndroid.SHORT);
+        }
+      } catch (error) {
+        // Handle errors
+        if (error.response && error.response.data && error.response.data.message) {
+          // Handle specific backend error messages like "Email already exists"
+          //ToastAndroid.show(error.response.data.message, ToastAndroid.SHORT);
+        } else {
+          // Network errors
+          //ToastAndroid.show('Network error. Please try again later.', ToastAndroid.SHORT);
+        }
+      }
+      finally {
+        setIsLoading(false);  // Hide loader after registration process completes
+      }
     } else {
-     
-      Alert.alert('Validation Error', 'Please enter both email and password');
+      //ToastAndroid.show('Please enter both email and password', ToastAndroid.SHORT);
     }
   };
 
@@ -53,12 +92,12 @@ export default function LoginScreen() {
         />
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Login</Text>
+      <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
+        <Text style={styles.buttonText}> {isLoading ? 'Signing In...' : 'Sign In'}</Text>
       </TouchableOpacity>
-
+      
       <View style={styles.footer}>
-        <TouchableOpacity onPress={() => Alert.alert('Forgot Password')}>
+        <TouchableOpacity onPress={() => Alert('Forgot Password')}>
           <Text style={styles.footerText}>Forgot Password?</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => router.replace('/auth/register')}>
