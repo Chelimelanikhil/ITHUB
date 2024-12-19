@@ -26,7 +26,7 @@ export default function LoginScreen() {
       setIsLoading(true);
       try {
         // Make the login request to the backend API
-        const response = await axios.post('http://localhost:5000/api/auth/login', {
+        const response = await axios.post('https://ithub-backend.onrender.com/api/auth/login', {
           email,
           password,
         });
@@ -37,7 +37,7 @@ export default function LoginScreen() {
           await AsyncStorage.setItem('token', response.data.token);
           await AsyncStorage.setItem('role', response.data.role); 
           // Show success message
-          //ToastAndroid.show('Login successful', ToastAndroid.SHORT);
+          ToastAndroid.show('Login successful', ToastAndroid.SHORT);
           if (response.data.role === 'user') {
             router.replace('/(tabs)');
           } else{
@@ -46,23 +46,23 @@ export default function LoginScreen() {
           // Navigate to the main app or dashboard
         
         } else {
-          //ToastAndroid.show('Invalid response from server', ToastAndroid.SHORT);
+          ToastAndroid.show('Invalid response from server', ToastAndroid.SHORT);
         }
       } catch (error) {
         // Handle errors
         if (error.response && error.response.data && error.response.data.message) {
           // Handle specific backend error messages like "Email already exists"
-          //ToastAndroid.show(error.response.data.message, ToastAndroid.SHORT);
+          ToastAndroid.show(error.response.data.message, ToastAndroid.SHORT);
         } else {
           // Network errors
-          //ToastAndroid.show('Network error. Please try again later.', ToastAndroid.SHORT);
+          ToastAndroid.show('Network error. Please try again later.', ToastAndroid.SHORT);
         }
       }
       finally {
         setIsLoading(false);  // Hide loader after registration process completes
       }
     } else {
-      //ToastAndroid.show('Please enter both email and password', ToastAndroid.SHORT);
+      ToastAndroid.show('Please enter both email and password', ToastAndroid.SHORT);
     }
   };
 

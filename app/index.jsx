@@ -13,7 +13,7 @@ export default function LoginScreen() {
       try {
         const token = await AsyncStorage.getItem('token');
         const role = await AsyncStorage.getItem('role'); 
-        console.log(token,role);
+       
 
         if (token) {
           if (role === 'user') {
@@ -43,6 +43,7 @@ export default function LoginScreen() {
     // Navigate based on the role
     if (isAuthenticated === 'user') {
       router.replace('/(tabs)'); // Navigate to tabs for user
+      //router.replace('/onboard/onboard');
     } else if (isAuthenticated === 'company') {
       router.replace('/company/company'); // Navigate to company-specific screen
     } else {

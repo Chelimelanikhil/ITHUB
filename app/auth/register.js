@@ -39,7 +39,7 @@ export default function RegisterScreen() {
 
     try {
       // Call the backend API to register the user
-      const response = await axios.post('http://localhost:5000/api/auth/register', {
+      const response = await axios.post('https://ithub-backend.onrender.com/api/auth/register', {
         name,
         email,
         password,
@@ -59,18 +59,18 @@ export default function RegisterScreen() {
         }
     
         // You can show a success message here, for example:
-        // ToastAndroid.show('Registration successful', ToastAndroid.SHORT);
+        ToastAndroid.show('Registration successful', ToastAndroid.SHORT);
       } else {
         // Show the error message from the backend
-        // ToastAndroid.show(response.data.message || 'Registration failed', ToastAndroid.SHORT);
+        ToastAndroid.show(response.data.message || 'Registration failed', ToastAndroid.SHORT);
       }
     } catch (error) {
       if (error.response && error.response.data && error.response.data.message) {
         // Handle specific backend error messages like "Email already exists"
-        // ToastAndroid.show(error.response.data.message, ToastAndroid.SHORT);
+        ToastAndroid.show(error.response.data.message, ToastAndroid.SHORT);
       } else {
         // Handle general network error
-        // ToastAndroid.show('Network error. Please try again later.', ToastAndroid.SHORT);
+      ToastAndroid.show('Network error. Please try again later.', ToastAndroid.SHORT);
       }
     } finally {
       setIsLoading(false);  // Hide loader after registration process completes
