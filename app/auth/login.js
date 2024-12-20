@@ -97,9 +97,10 @@ export default function LoginScreen() {
       </TouchableOpacity>
       
       <View style={styles.footer}>
-        <TouchableOpacity onPress={() => Alert('Forgot Password')}>
-          <Text style={styles.footerText}>Forgot Password?</Text>
-        </TouchableOpacity>
+      <TouchableOpacity onPress={() => router.replace('/auth/forgot-password')}>
+  <Text style={styles.footerText}>Forgot Password?</Text>
+</TouchableOpacity>
+
         <TouchableOpacity onPress={() => router.replace('/auth/register')}>
           <Text style={styles.footerText}>Don't have an account? Register</Text>
         </TouchableOpacity>
