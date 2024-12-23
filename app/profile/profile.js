@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -6,12 +6,14 @@ import { useRoute } from "@react-navigation/native";
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import SuccessAlert from '../../components/Alert/SuccessAlert';
+import {  useNavigation } from "expo-router";
 
 export default function ProfileScreen() {
   const route = useRoute();
   const { name, email, role, profilePic } = route.params || {};
   const userData = { name, email, role, profilePic };
-    
+
   const [localUserData, setLocalUserData] = useState(userData);
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(userData?.name || '');
@@ -22,6 +24,18 @@ export default function ProfileScreen() {
   const [showPasswordFields, setShowPasswordFields] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+   const navigation = useNavigation();
+  
+    useEffect(() => {
+      navigation.setOptions({
+        headerShown: false,
+        headerTransparent: false,
+        headerTitle: "",
+      });
+    }, []);
 
   const handleImagePick = async () => {
     try {
@@ -51,40 +65,34 @@ export default function ProfileScreen() {
       Alert.alert('Error', 'Please fill in all password fields');
       return;
     }
-
     if (newPassword !== confirmPassword) {
       Alert.alert('Error', 'New passwords do not match');
       return;
     }
-
-    
-
     setIsLoading(true);
     setError(null);
-
+  
     try {
-      //const token = await AsyncStorage.getItem('token');
-      const token="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NjkwNmUyMWQxOGY3MWMwODJjMzU5MCIsImVtYWlsIjoibmlraGlsQGdtYWlsLmNvbSIsImlhdCI6MTczNDkzNzMwNCwiZXhwIjoxNzM0OTczMzA0fQ.EFnkRFliPyBCv91XFe-3mWfg8Rn0NytQpSkUwT6NHPQ";
-      
+      const token = await AsyncStorage.getItem('token');
+  
       if (!token) {
         Alert.alert('Error', 'Authentication token not found. Please login again.');
-        // Add navigation to login screen if needed
         return;
       }
-
+  
       const response = await axios.post(
-        'http://localhost:5000/api/auth/profile/reset-password',
+        'https://ithub-backend.onrender.com/api/auth/profile/reset-password',
         {
           currentPassword,
           newPassword,
         },
         {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
-
-      if (response.data.success) {
-        Alert.alert('Success', 'Password updated successfully');
+  
+      if (response.status === 200) {
+        setShowSuccessAlert(true); // Show the styled success alert
         setShowPasswordFields(false);
         setCurrentPassword('');
         setNewPassword('');
@@ -95,42 +103,75 @@ export default function ProfileScreen() {
       }
     } catch (error) {
       let errorMessage = 'An error occurred while updating password';
-
+  
       if (error.response) {
         if (error.response.status === 401) {
           errorMessage = 'Current password is incorrect';
         } else if (error.response.status === 403) {
           await AsyncStorage.removeItem('token');
           errorMessage = 'Session expired. Please login again.';
-          // Add navigation to login screen if needed
         } else {
           errorMessage = error.response.data.message || errorMessage;
         }
       } else if (error.request) {
         errorMessage = 'Network error. Please check your connection.';
       }
-
+  
       setError(errorMessage);
       Alert.alert('Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
-
   const handleSave = async () => {
     if (newName === localUserData.name && !newProfilePic) {
       Alert.alert('No Changes', 'No changes to save');
       return;
     }
 
-    setLocalUserData(prev => ({
-      ...prev,
-      name: newName,
-      profilePic: newProfilePic ? newProfilePic.uri : prev.profilePic
-    }));
+    setIsSaving(true);
 
-    setIsEditing(false);
-    Alert.alert('Success', 'Profile updated successfully');
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        Alert.alert('Error', 'Authentication token not found. Please login again.');
+        return;
+      }
+
+      const response = await axios.put(
+        'https://ithub-backend.onrender.com/api/auth/profile/update-profile',
+        {
+          name: newName,
+          profilePic: newProfilePic?.uri || localUserData.profilePic,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (response.status === 200) {
+        setLocalUserData(prev => ({
+          ...prev,
+          name: response.data.user.name,
+          profilePic: response.data.user.profilePic,
+        }));
+
+        Alert.alert('Success', 'Profile updated successfully');
+      } else {
+        Alert.alert('Error', response.data.message || 'Failed to update profile');
+      }
+    } catch (error) {
+      let errorMessage = 'An error occurred while updating the profile';
+      if (error.response) {
+        errorMessage = error.response.data.message || errorMessage;
+      } else if (error.request) {
+        errorMessage = 'Network error. Please check your connection.';
+      }
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setIsSaving(false);
+      setIsEditing(false);
+    }
   };
 
   const renderPasswordSection = () => (
@@ -165,40 +206,38 @@ export default function ProfileScreen() {
             placeholderTextColor="#A0A0A0"
             editable={!isLoading}
           />
-          {error && (
-            <Text style={styles.errorText}>{error}</Text>
-          )}
+          
           <View style={styles.buttonContainer}>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => {
                 setShowPasswordFields(false);
                 setError(null);
                 setCurrentPassword('');
                 setNewPassword('');
                 setConfirmPassword('');
-              }} 
+              }}
               style={[styles.button, styles.cancelButton]}
               disabled={isLoading}
             >
               <Text style={styles.buttonText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              onPress={handlePasswordReset} 
+            <TouchableOpacity
+              onPress={handlePasswordReset}
               style={[
-                styles.button, 
+                styles.button,
                 styles.saveButton,
                 isLoading && styles.disabledButton
               ]}
               disabled={isLoading}
             >
               <Text style={styles.buttonText}>
-                {isLoading ? 'Updating...' : 'Update Password'}
+                {isLoading ? 'Updating...' : 'Update'}
               </Text>
             </TouchableOpacity>
           </View>
         </>
       ) : (
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => setShowPasswordFields(true)}
           style={[styles.button, styles.securityButton]}
         >
@@ -227,16 +266,16 @@ export default function ProfileScreen() {
       >
         <View style={styles.headerContent}>
           <View style={styles.profilePicWrapper}>
-            <TouchableOpacity 
-              onPress={isEditing ? handleImagePick : null} 
+            <TouchableOpacity
+              onPress={isEditing ? handleImagePick : null}
               style={styles.profilePicContainer}
             >
               {localUserData.profilePic || newProfilePic ? (
-                <Image 
-                  source={{ 
-                    uri: newProfilePic ? newProfilePic.uri : localUserData.profilePic 
-                  }} 
-                  style={styles.profilePic} 
+                <Image
+                  source={{
+                    uri: newProfilePic ? newProfilePic.uri : localUserData.profilePic
+                  }}
+                  style={styles.profilePic}
                 />
               ) : (
                 <MaterialCommunityIcons name="account-circle" size={132} color="white" />
@@ -295,28 +334,29 @@ export default function ProfileScreen() {
 
           {isEditing ? (
             <View style={styles.buttonContainer}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => {
                   setIsEditing(false);
                   setNewName(localUserData.name);
                   setNewProfilePic(null);
-                }} 
+                }}
                 style={[styles.button, styles.cancelButton]}
               >
                 <MaterialCommunityIcons name="close" size={20} color="white" style={styles.buttonIcon} />
                 <Text style={styles.buttonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                onPress={handleSave} 
+              <TouchableOpacity
+                onPress={handleSave}
                 style={[styles.button, styles.saveButton]}
+                disabled={isSaving}
               >
                 <MaterialCommunityIcons name="check" size={20} color="white" style={styles.buttonIcon} />
-                <Text style={styles.buttonText}>Save Changes</Text>
+                <Text style={styles.buttonText}>{isSaving ? 'Saving...' : 'Save'}</Text>
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity 
-              onPress={() => setIsEditing(true)} 
+            <TouchableOpacity
+              onPress={() => setIsEditing(true)}
               style={[styles.button, styles.editButton]}
             >
               <MaterialCommunityIcons name="account-edit" size={24} color="white" style={styles.buttonIcon} />
@@ -326,6 +366,11 @@ export default function ProfileScreen() {
         </View>
 
         {renderPasswordSection()}
+        <SuccessAlert
+      visible={showSuccessAlert}
+      message="Your password has been successfully changed. Please use your new password the next time you log in."
+      onClose={() => setShowSuccessAlert(false)}
+    />
       </View>
     </ScrollView>
   );
@@ -491,4 +536,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  errorText: {
+    color: '#E74C3C',
+    marginTop: 8,
+    marginBottom: 8,
+    fontSize: 14,
+  },
+  disabledButton: {
+    opacity: 0.7,
+    backgroundColor: '#95A5A6',
+  }
 });

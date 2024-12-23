@@ -88,6 +88,11 @@ export default function IndexScreen() {
     });
   }, []);
 
+  const parentcallback = async () => {
+    // Refetch the entire company data when a new job is added
+    await fetchUserData();
+  };
+
   const handleLogout = async () => {
     try {
       // Clear the user token from AsyncStorage
@@ -123,25 +128,27 @@ export default function IndexScreen() {
 
     setIsSidebarVisible(!isSidebarVisible);
   };
-
   const handleProfileNavigation = () => {
+    // Close the sidebar
+    toggleSidebar();
+
     // Extract only the necessary user data
     const userDataForProfile = {
-      name: userData.name || '',
-      email: userData.email || '',
-      role: userData.role || '',
-      profilePic: userData.profilePic || '',
+      name: userData.name || "",
+      email: userData.email || "",
+      role: userData.role || "",
+      profilePic: userData.profilePic || "",
       // Add any other required fields
     };
-  
+
     router.push({
       pathname: "/profile/profile",
       params: {
         name: userDataForProfile.name,
         email: userDataForProfile.email,
         role: userDataForProfile.role,
-        profilePic: userDataForProfile.profilePic
-      }
+        profilePic: userDataForProfile.profilePic,
+      },
     });
   };
   const renderSidebar = () => (
@@ -186,7 +193,9 @@ export default function IndexScreen() {
           <View style={styles.userInfoSection}>
             <Image
               source={{
-                uri: userData.profilePic || "https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?semt=ais_hybrid",
+                uri:
+                  userData.profilePic ||
+                  "https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?semt=ais_hybrid",
               }}
               style={styles.sidebarProfileImage}
             />
@@ -210,8 +219,6 @@ export default function IndexScreen() {
               style={styles.sidebarItem}
               onPress={handleProfileNavigation}
             >
-
-
               <MaterialCommunityIcons
                 name="account-outline"
                 size={24}
@@ -393,7 +400,9 @@ export default function IndexScreen() {
         <TouchableOpacity onPress={toggleSidebar} style={styles.profileButton}>
           <Image
             source={{
-              uri: userData.profilePic || "https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?semt=ais_hybrid",
+              uri:
+                userData.profilePic ||
+                "https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?semt=ais_hybrid",
             }}
             style={styles.profileImage}
           />
@@ -436,7 +445,11 @@ export default function IndexScreen() {
                 {/* Profile Image */}
                 <View style={styles.profileSection}>
                   <Image
-                    source={{ uri: userData.profilePic || "https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?semt=ais_hybrid" }}
+                    source={{
+                      uri:
+                        userData.profilePic ||
+                        "https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?semt=ais_hybrid",
+                    }}
                     style={styles.profilePic}
                   />
                   <Text style={styles.sidebarProfileName}>{userData.name}</Text>
@@ -585,7 +598,6 @@ const styles = StyleSheet.create({
     width: 55,
     height: 45,
     marginRight: 12,
-    
   },
   headerTextContainer: {
     justifyContent: "center",
