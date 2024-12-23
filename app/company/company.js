@@ -34,7 +34,6 @@ const CompanyProfile = () => {
     setIsLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
-      //const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NjNiN2M1NzIxYmU2ZGJhNzdkNjUzMSIsImVtYWlsIjoibXVza2FuQGdtYWlsLmNvbSIsImlhdCI6MTczNDU5MzA3MiwiZXhwIjoxNzM0NjI5MDcyfQ.16hRbXoXko6jfAkNqZUVyneH2olknajc7Yt_qffzWCA";
       const response = await axios.get('https://ithub-backend.onrender.com/api/companies/companydetails', {
         headers: { Authorization: `Bearer ${token}` },
       });

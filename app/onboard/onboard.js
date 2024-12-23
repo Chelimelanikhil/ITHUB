@@ -73,10 +73,8 @@ const CompanyOnboarding = () => {
   const handleSubmit = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      //const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NTk0MmVkNzY5NjNiYjMyNGExYmU4NCIsImVtYWlsIjoibmlraGlsQGdtYWlsLmNvbSIsImlhdCI6MTczNDU4ODE1NiwiZXhwIjoxNzM0NjI0MTU2fQ.NkFA3NwOF7wArPeEB1M8uub5X6azqzN-hkgZIZUYVCk";
-
-    
-      await axios.post('https://ithub-backend.onrender.com/api/companies/onboarding',
+      //const token ="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NjU2YTc3NDkxYTdjMjA1ZTViZWJhNiIsImVtYWlsIjoibmFuaUBnbWFpbC5jb20iLCJpYXQiOjE3MzQ3MDAwMTUsImV4cCI6MTczNDczNjAxNX0.gzFamssyvBUM5trr--8l_yTQwHxgom8Fv3RB40gxdNU";
+      await axios.post('http://localhost:5000/api/companies/onboarding',
         companyProfile,
         {
           headers: {

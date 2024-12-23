@@ -37,7 +37,7 @@ export default function LoginScreen() {
           await AsyncStorage.setItem('token', response.data.token);
           await AsyncStorage.setItem('role', response.data.role); 
           // Show success message
-          ToastAndroid.show('Login successful', ToastAndroid.SHORT);
+          //ToastAndroid.show('Login successful', ToastAndroid.SHORT);
           if (response.data.role === 'user') {
             router.replace('/(tabs)');
           } else{
@@ -46,7 +46,7 @@ export default function LoginScreen() {
           // Navigate to the main app or dashboard
         
         } else {
-          ToastAndroid.show('Invalid response from server', ToastAndroid.SHORT);
+          //ToastAndroid.show('Invalid response from server', ToastAndroid.SHORT);
         }
       } catch (error) {
         // Handle errors

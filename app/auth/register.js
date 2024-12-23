@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ToastAndroid, ActivityIndicator, Switch } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ToastAndroid, ActivityIndicator, Switch, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from 'expo-router';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false); // Loading state
   const [isCompany, setIsCompany] = useState(false); // Track if the user is a company or not
+  const [profilePic, setProfilePic] = useState(null);
   const navigation = useNavigation();
 
   useEffect(() => {
@@ -35,53 +37,76 @@ export default function RegisterScreen() {
       return;
     }
 
-    setIsLoading(true);  // Show loader while the registration process is in progress
+    setIsLoading(true);
 
     try {
-      // Call the backend API to register the user
-      const response = await axios.post('https://ithub-backend.onrender.com/api/auth/register', {
+      const formData = {
         name,
         email,
         password,
-        role: isCompany ? 'company' : 'user', 
-      });
-    
-      // Check if registration was successful
+        role: isCompany ? 'company' : 'user',
+        profilePic: profilePic ? profilePic.uri : null, // Include profilePic if selected
+      };
+
+      const response = await axios.post('https://ithub-backend.onrender.com/api/auth/register', formData);
+
       if (response.data.message === 'User registered successfully') {
         await AsyncStorage.setItem('token', response.data.token);
-        await AsyncStorage.setItem('role', response.data.role); 
-        // If the role is company, navigate to the onboarding screen
-        if (response.data.role === 'company') {
-          router.replace('/onboard/onboard'); // Navigate to the onboarding screen
-        } else {
-          // Otherwise, navigate to the login page
-          router.replace('/auth/login'); // Navigate to the login page
-        }
-    
-        // You can show a success message here, for example:
+        await AsyncStorage.setItem('role', response.data.role);
+
+        router.replace(response.data.role === 'company' ? '/onboard/onboard' : '/auth/login');
+
         ToastAndroid.show('Registration successful', ToastAndroid.SHORT);
       } else {
-        // Show the error message from the backend
         ToastAndroid.show(response.data.message || 'Registration failed', ToastAndroid.SHORT);
       }
     } catch (error) {
-      if (error.response && error.response.data && error.response.data.message) {
-        // Handle specific backend error messages like "Email already exists"
-        ToastAndroid.show(error.response.data.message, ToastAndroid.SHORT);
-      } else {
-        // Handle general network error
-      ToastAndroid.show('Network error. Please try again later.', ToastAndroid.SHORT);
-      }
+      ToastAndroid.show(
+        error.response?.data?.message || 'Network error. Please try again later.',
+        ToastAndroid.SHORT
+      );
     } finally {
-      setIsLoading(false);  // Hide loader after registration process completes
-    }    
+      setIsLoading(false);
+    }
+  };
+  const handleImagePick = async () => {
+    // Request permission to access the media library
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      ToastAndroid.show('Permission to access the media library is required!', ToastAndroid.SHORT);
+      return;
+    }
+
+    // Open the image picker
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      const selectedImage = result.assets[0];
+      // Validate the image
+      if (selectedImage.uri && selectedImage.type === 'image') {
+        setProfilePic(selectedImage);
+      } else {
+        ToastAndroid.show('Invalid image selected', ToastAndroid.SHORT);
+      }
+    }
   };
 
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Create Account</Text>
-
+      <TouchableOpacity onPress={handleImagePick} style={styles.profilePicContainer}>
+        {profilePic ? (
+          <Image source={{ uri: profilePic.uri }} style={styles.profilePic} />
+        ) : (
+          <MaterialCommunityIcons name="account-circle" size={80} color="gray" />
+        )}
+      </TouchableOpacity>
       <View style={styles.inputContainer}>
         <MaterialCommunityIcons name="account" size={24} color="gray" style={styles.icon} />
         <TextInput
@@ -140,7 +165,7 @@ export default function RegisterScreen() {
         <Text style={styles.buttonText}> {isLoading ? 'Signing Up...' : 'Sign Up'} </Text>
       </TouchableOpacity>
 
-    
+
 
       <View style={styles.footer}>
         <TouchableOpacity onPress={() => router.replace('/auth/login')}>
@@ -220,5 +245,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     marginRight: 10,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 40,
+  },
+  profilePicContainer: {
+    marginBottom: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 50,
+    width: 100,
+    height: 100,
+  },
+  profilePic: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
 });

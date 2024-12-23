@@ -22,7 +22,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 
 const { width } = Dimensions.get("window");
-const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
+const AnimatedTouchableOpacity =
+  Animated.createAnimatedComponent(TouchableOpacity);
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
 export default function IndexScreen() {
@@ -58,7 +59,6 @@ export default function IndexScreen() {
         }
       );
       const data = await response.json();
-      
       setUserData(data);
     } catch (error) {
       console.error("Error fetching User data:", error);
@@ -88,17 +88,6 @@ export default function IndexScreen() {
     });
   }, []);
 
-  // const toggleSidebar = () => {
-  //   const toValue = sidebarVisible ? -300 : 0;
-  //   Animated.timing(sidebarAnimation, {
-  //     toValue,
-  //     duration: 300,
-  //     useNativeDriver: true,
-  //   }).start(() => {
-  //     setSidebarVisible(!sidebarVisible);
-  //   });
-  // };
-
   const handleLogout = async () => {
     try {
       // Clear the user token from AsyncStorage
@@ -123,18 +112,38 @@ export default function IndexScreen() {
         toValue,
         useNativeDriver: true,
         tension: 65,
-        friction: 11
+        friction: 11,
       }),
       Animated.timing(overlayOpacity, {
         toValue: overlayToValue,
         duration: 300,
-        useNativeDriver: true
-      })
+        useNativeDriver: true,
+      }),
     ]).start();
 
     setIsSidebarVisible(!isSidebarVisible);
   };
 
+  const handleProfileNavigation = () => {
+    // Extract only the necessary user data
+    const userDataForProfile = {
+      name: userData.name || '',
+      email: userData.email || '',
+      role: userData.role || '',
+      profilePic: userData.profilePic || '',
+      // Add any other required fields
+    };
+  
+    router.push({
+      pathname: "/profile/profile",
+      params: {
+        name: userDataForProfile.name,
+        email: userDataForProfile.email,
+        role: userDataForProfile.role,
+        profilePic: userDataForProfile.profilePic
+      }
+    });
+  };
   const renderSidebar = () => (
     <>
       <Animated.View
@@ -142,8 +151,8 @@ export default function IndexScreen() {
           styles.overlay,
           {
             opacity: overlayOpacity,
-            display: isSidebarVisible ? 'flex' : 'none'
-          }
+            display: isSidebarVisible ? "flex" : "none",
+          },
         ]}
       >
         <TouchableWithoutFeedback onPress={toggleSidebar}>
@@ -155,8 +164,8 @@ export default function IndexScreen() {
         style={[
           styles.sidebar,
           {
-            transform: [{ translateX: sidebarTranslateX }]
-          }
+            transform: [{ translateX: sidebarTranslateX }],
+          },
         ]}
       >
         <LinearGradient
@@ -166,7 +175,7 @@ export default function IndexScreen() {
           style={styles.sidebarGradient}
         >
           <View style={styles.sidebarHeader}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.closeButton}
               onPress={toggleSidebar}
             >
@@ -176,7 +185,9 @@ export default function IndexScreen() {
 
           <View style={styles.userInfoSection}>
             <Image
-              source={{ uri: userData.profileImage || "https://via.placeholder.com/100" }}
+              source={{
+                uri: userData.profilePic || "https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?semt=ais_hybrid",
+              }}
               style={styles.sidebarProfileImage}
             />
             <Text style={styles.sidebarUsername}>{userData.name}</Text>
@@ -195,36 +206,57 @@ export default function IndexScreen() {
           </View>
 
           <View style={styles.sidebarContent}>
-            <TouchableOpacity style={styles.sidebarItem}>
-              <MaterialCommunityIcons name="account-outline" size={24} color="#fff" />
+            <TouchableOpacity
+              style={styles.sidebarItem}
+              onPress={handleProfileNavigation}
+            >
+
+
+              <MaterialCommunityIcons
+                name="account-outline"
+                size={24}
+                color="#fff"
+              />
               <Text style={styles.sidebarItemText}>My Profile</Text>
             </TouchableOpacity>
-
             <TouchableOpacity style={styles.sidebarItem}>
-              <MaterialCommunityIcons name="briefcase-outline" size={24} color="#fff" />
+              <MaterialCommunityIcons
+                name="briefcase-outline"
+                size={24}
+                color="#fff"
+              />
               <Text style={styles.sidebarItemText}>My Applications</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.sidebarItem}>
-              <MaterialCommunityIcons name="bookmark-outline" size={24} color="#fff" />
+              <MaterialCommunityIcons
+                name="bookmark-outline"
+                size={24}
+                color="#fff"
+              />
               <Text style={styles.sidebarItemText}>Saved Jobs</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.sidebarItem}>
-              <MaterialCommunityIcons name="bell-outline" size={24} color="#fff" />
+              <MaterialCommunityIcons
+                name="bell-outline"
+                size={24}
+                color="#fff"
+              />
               <Text style={styles.sidebarItemText}>Notifications</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.sidebarItem}>
-              <MaterialCommunityIcons name="cog-outline" size={24} color="#fff" />
+              <MaterialCommunityIcons
+                name="cog-outline"
+                size={24}
+                color="#fff"
+              />
               <Text style={styles.sidebarItemText}>Settings</Text>
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity 
-            style={styles.logoutButton}
-            onPress={handleLogout}
-          >
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <MaterialCommunityIcons name="logout" size={24} color="#E74C3C" />
             <Text style={styles.logoutText}>Log Out</Text>
           </TouchableOpacity>
@@ -232,7 +264,6 @@ export default function IndexScreen() {
       </Animated.View>
     </>
   );
-
 
   const handleSearch = (query) => {
     setSearchQuery(query);
@@ -285,10 +316,10 @@ export default function IndexScreen() {
         onPress={() => handleCompanyPress(item._id)}
         style={[
           styles.companyCard,
-          { 
+          {
             transform: [{ scale }],
-            opacity 
-          }
+            opacity,
+          },
         ]}
       >
         <LinearGradient
@@ -296,10 +327,7 @@ export default function IndexScreen() {
           style={styles.cardGradient}
         >
           <View style={styles.companyHeader}>
-            <Image 
-              source={{ uri: item.logo }} 
-              style={styles.companyLogo}
-            />
+            <Image source={{ uri: item.logo }} style={styles.companyLogo} />
             <View style={styles.companyInfo}>
               <Text style={styles.companyName}>{item.name}</Text>
               <View style={styles.locationContainer}>
@@ -330,31 +358,23 @@ export default function IndexScreen() {
               <Text style={styles.statText}>{item.employees} employees</Text>
             </View>
             <View style={styles.statItem}>
-              <MaterialCommunityIcons 
-                name="star" 
-                size={18} 
-                color="#FFD700" 
-              />
+              <MaterialCommunityIcons name="star" size={18} color="#FFD700" />
               <Text style={styles.statText}>{item.rating} rating</Text>
             </View>
-     
-              <View style={styles.openingsContainer}>
-                <MaterialCommunityIcons
-                  name="briefcase"
-                  size={18}
-                  color="#4CAF50"
-                />
-                <Text style={styles.openingsText}>
-                  1 positions
-                </Text>
-              </View>
-          
+
+            <View style={styles.openingsContainer}>
+              <MaterialCommunityIcons
+                name="briefcase"
+                size={18}
+                color="#4CAF50"
+              />
+              <Text style={styles.openingsText}>1 positions</Text>
+            </View>
           </View>
         </LinearGradient>
       </AnimatedTouchableOpacity>
     );
   };
-
 
   if (loading) {
     return (
@@ -370,33 +390,31 @@ export default function IndexScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.headerContent}>
-          <TouchableOpacity 
-            onPress={toggleSidebar}
-            style={styles.profileButton}
-          >
-          
+        <TouchableOpacity onPress={toggleSidebar} style={styles.profileButton}>
+          <Image
+            source={{
+              uri: userData.profilePic || "https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?semt=ais_hybrid",
+            }}
+            style={styles.profileImage}
+          />
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.welcomeText}>Welcome back</Text>
+            <Text style={styles.profileName}>{userData.name}</Text>
+          </View>
+        </TouchableOpacity>
 
-            <Image
-             source={{ uri: userData.profileImage || "https://via.placeholder.com/100" }}
-              
-              style={styles.profileImage}
-            />
-            <View style={styles.headerTextContainer}>
-              <Text style={styles.welcomeText}>Welcome back</Text>
-              <Text style={styles.profileName}>{userData.name}</Text>
-            </View>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.notificationButton}>
-            <MaterialCommunityIcons name="bell-outline" size={28} color="#2C3E50" />
-          
-              <View style={styles.notificationBadge}>
-                <Text style={styles.badgeText}>3</Text>
-              </View>
-           
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity style={styles.notificationButton}>
+          <MaterialCommunityIcons
+            name="bell-outline"
+            size={28}
+            color="#2C3E50"
+          />
 
+          <View style={styles.notificationBadge}>
+            <Text style={styles.badgeText}>3</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
 
       {sidebarVisible && (
         <TouchableWithoutFeedback onPress={toggleSidebar}>
@@ -418,7 +436,7 @@ export default function IndexScreen() {
                 {/* Profile Image */}
                 <View style={styles.profileSection}>
                   <Image
-                    source={{ uri: "https://via.placeholder.com/100" }}
+                    source={{ uri: userData.profilePic || "https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?semt=ais_hybrid" }}
                     style={styles.profilePic}
                   />
                   <Text style={styles.sidebarProfileName}>{userData.name}</Text>
@@ -539,8 +557,7 @@ export default function IndexScreen() {
           </View>
         )}
       />
-       {renderSidebar()}
-
+      {renderSidebar()}
     </SafeAreaView>
   );
 }
@@ -565,12 +582,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   profileImage: {
-    width: 45,
+    width: 55,
     height: 45,
-    borderRadius: 22.5,
     marginRight: 12,
-    borderWidth: 2,
-    borderColor: "#4A90E2",
+    
   },
   headerTextContainer: {
     justifyContent: "center",
@@ -658,7 +673,7 @@ const styles = StyleSheet.create({
     color: "#ffffff",
   },
   listContainer: {
-   padding:15
+    padding: 15,
   },
   companyCard: {
     marginBottom: 15,
@@ -751,22 +766,22 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 14,
   },
-   overlay: {
+  overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000',
+    backgroundColor: "#000",
     zIndex: 1000,
   },
   overlayTouchable: {
     flex: 1,
   },
   sidebar: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     top: 0,
     bottom: 0,
-    width: width * 0.80,
+    width: width * 0.8,
     zIndex: 1001,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -781,15 +796,15 @@ const styles = StyleSheet.create({
     paddingTop: StatusBar.currentHeight,
   },
   sidebarHeader: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "flex-end",
     padding: 16,
   },
   closeButton: {
     padding: 8,
   },
   userInfoSection: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 20,
   },
   sidebarProfileImage: {
@@ -797,44 +812,44 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 3,
-    borderColor: '#fff',
+    borderColor: "#fff",
     marginBottom: 16,
   },
   sidebarUsername: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 4,
   },
   sidebarEmail: {
-    color: 'rgba(255,255,255,0.8)',
+    color: "rgba(255,255,255,0.8)",
     fontSize: 14,
     marginBottom: 20,
   },
   userStats: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: "row",
+    backgroundColor: "rgba(255,255,255,0.1)",
     borderRadius: 12,
     padding: 16,
     marginHorizontal: 20,
   },
   userStatItem: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   statNumber: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   statLabel: {
-    color: 'rgba(255,255,255,0.8)',
+    color: "rgba(255,255,255,0.8)",
     fontSize: 12,
     marginTop: 4,
   },
   statDivider: {
     width: 1,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: "rgba(255,255,255,0.2)",
     marginHorizontal: 15,
   },
   sidebarContent: {
@@ -842,30 +857,30 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   sidebarItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 24,
   },
   sidebarItemText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
     marginLeft: 16,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.1)",
     marginHorizontal: 20,
     marginBottom: 30,
     padding: 16,
     borderRadius: 12,
   },
   logoutText: {
-    color: '#E74C3C',
+    color: "#E74C3C",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 12,
   },
   centered: {
@@ -877,5 +892,4 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: "#007AFF",
   },
-
 });
