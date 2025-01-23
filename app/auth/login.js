@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity,ActivityIndicator, ToastAndroid, Alert } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ActivityIndicator, ToastAndroid, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from "expo-router";
@@ -11,6 +11,8 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isPasswordVisible, setPasswordVisible] = useState(false);
+
   const navigation = useNavigation();
 
   useEffect(() => {
@@ -21,50 +23,65 @@ export default function LoginScreen() {
     });
   }, []);
 
-  const handleLogin = async () => {
-    if (email && password) {
-      setIsLoading(true);
-      try {
-        // Make the login request to the backend API
-        const response = await axios.post('https://ithub-backend.onrender.com/api/auth/login', {
-          email,
-          password,
-        });
 
-        // Check if the response contains a token
-        if (response.data.token) {
-          // Store the token in AsyncStorage
-          await AsyncStorage.setItem('token', response.data.token);
-          await AsyncStorage.setItem('role', response.data.role); 
-          // Show success message
-          //ToastAndroid.show('Login successful', ToastAndroid.SHORT);
-          if (response.data.role === 'user') {
-            router.replace('/(tabs)');
-          } else{
-            router.replace('/company/company');
-          } ;
-          // Navigate to the main app or dashboard
-        
-        } else {
-          //ToastAndroid.show('Invalid response from server', ToastAndroid.SHORT);
-        }
-      } catch (error) {
-        // Handle errors
-        if (error.response && error.response.data && error.response.data.message) {
-          // Handle specific backend error messages like "Email already exists"
-          ToastAndroid.show(error.response.data.message, ToastAndroid.SHORT);
-        } else {
-          // Network errors
-          ToastAndroid.show('Network error. Please try again later.', ToastAndroid.SHORT);
-        }
-      }
-      finally {
-        setIsLoading(false);  // Hide loader after registration process completes
-      }
-    } else {
-      ToastAndroid.show('Please enter both email and password', ToastAndroid.SHORT);
+  const validateInputs = () => {
+    if (!email || !password) {
+      ToastAndroid.show('Please fill in all fields.', ToastAndroid.SHORT);
+      return false;
     }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      ToastAndroid.show('Please enter a valid email.', ToastAndroid.SHORT);
+      return false;
+    }
+
+    return true;
   };
+
+  const handleLogin = async () => {
+    if (!validateInputs()) return;
+
+    setIsLoading(true);
+    try {
+      // Make the login request to the backend API
+      const response = await axios.post('https://ithub-backend.onrender.com/api/auth/login', {
+        email,
+        password,
+      });
+
+      // Check if the response contains a token
+      if (response.data.token) {
+        // Store the token in AsyncStorage
+        await AsyncStorage.setItem('token', response.data.token);
+        await AsyncStorage.setItem('role', response.data.role);
+        // Show success message
+        ToastAndroid.show('Login successful', ToastAndroid.SHORT);
+        if (response.data.role === 'user') {
+          router.replace('/(tabs)');
+        } else {
+          router.replace('/company/company');
+        };
+        // Navigate to the main app or dashboard
+
+      } else {
+        ToastAndroid.show('Invalid response from server', ToastAndroid.SHORT);
+      }
+    } catch (error) {
+      // Handle errors
+      if (error.response && error.response.data && error.response.data.message) {
+        // Handle specific backend error messages like "Email already exists"
+        ToastAndroid.show(error.response.data.message, ToastAndroid.SHORT);
+      } else {
+        // Network errors
+        ToastAndroid.show('Network error. Please try again later.', ToastAndroid.SHORT);
+      }
+    }
+    finally {
+      setIsLoading(false);  // Hide loader after registration process completes
+    }
+
+  };
+
 
   return (
     <View style={styles.container}>
@@ -86,22 +103,33 @@ export default function LoginScreen() {
         <TextInput
           style={styles.input}
           placeholder="Password"
-          secureTextEntry
+          secureTextEntry={!isPasswordVisible}
           value={password}
           onChangeText={setPassword}
         />
+        <TouchableOpacity onPress={() => setPasswordVisible(!isPasswordVisible)}>
+          <MaterialCommunityIcons
+            name={isPasswordVisible ? "eye-off" : "eye"}
+            size={24}
+            color="gray"
+          />
+        </TouchableOpacity>
       </View>
 
       <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
-        <Text style={styles.buttonText}> {isLoading ? 'Signing In...' : 'Sign In'}</Text>
+        {isLoading ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Sign In</Text>
+        )}
       </TouchableOpacity>
-      
-      <View style={styles.footer}>
-      <TouchableOpacity onPress={() => router.replace('/auth/forgot-password')}>
-  <Text style={styles.footerText}>Forgot Password?</Text>
-</TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.replace('/auth/register')}>
+      <View style={styles.footer}>
+        <TouchableOpacity onPress={() => router.push('/auth/forgot-password')}>
+          <Text style={styles.footerText}>Forgot Password?</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => router.push('/auth/register')}>
           <Text style={styles.footerText}>Don't have an account? Register</Text>
         </TouchableOpacity>
       </View>
@@ -165,5 +193,6 @@ const styles = StyleSheet.create({
     color: '#007bff',
     fontSize: 16,
     marginBottom: 10,
+    textDecorationLine: 'underline',
   },
 });

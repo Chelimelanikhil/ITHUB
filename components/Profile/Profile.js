@@ -1,19 +1,13 @@
-import React, { useState,useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, Alert } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, Alert,SafeAreaView  } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useRoute } from "@react-navigation/native";
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import SuccessAlert from '../../components/Alert/SuccessAlert';
-import {  useNavigation } from "expo-router";
 
-export default function ProfileScreen() {
-  const route = useRoute();
-  const { name, email, role, profilePic } = route.params || {};
-  const userData = { name, email, role, profilePic };
-
+const Profile = ({ userData, onClose, onUpdate }) => {
   const [localUserData, setLocalUserData] = useState(userData);
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(userData?.name || '');
@@ -23,19 +17,24 @@ export default function ProfileScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPasswordFields, setShowPasswordFields] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-   const navigation = useNavigation();
+
   
-    useEffect(() => {
-      navigation.setOptions({
-        headerShown: false,
-        headerTransparent: false,
-        headerTitle: "",
-      });
-    }, []);
+
+  const scrollViewRef = useRef(null);
+
+  const handleShowPasswordFields = () => {
+    setShowPasswordFields(!showPasswordFields);
+    
+    // Scroll to password section
+    setTimeout(() => {
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollToEnd({ animated: true });
+      }
+    }, 100);
+  };
 
   const handleImagePick = async () => {
     try {
@@ -70,11 +69,10 @@ export default function ProfileScreen() {
       return;
     }
     setIsLoading(true);
-    setError(null);
-  
+    
     try {
       const token = await AsyncStorage.getItem('token');
-  
+      
       if (!token) {
         Alert.alert('Error', 'Authentication token not found. Please login again.');
         return;
@@ -90,15 +88,14 @@ export default function ProfileScreen() {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-  
+
       if (response.status === 200) {
-        setShowSuccessAlert(true); // Show the styled success alert
+        setShowSuccessAlert(true);
         setShowPasswordFields(false);
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
       } else {
-        setError(response.data.message || 'Failed to update password');
         Alert.alert('Error', response.data.message || 'Failed to update password');
       }
     } catch (error) {
@@ -117,27 +114,27 @@ export default function ProfileScreen() {
         errorMessage = 'Network error. Please check your connection.';
       }
   
-      setError(errorMessage);
       Alert.alert('Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
+
   const handleSave = async () => {
     if (newName === localUserData.name && !newProfilePic) {
       Alert.alert('No Changes', 'No changes to save');
       return;
     }
-
+  
     setIsSaving(true);
-
+  
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
         Alert.alert('Error', 'Authentication token not found. Please login again.');
         return;
       }
-
+  
       const response = await axios.put(
         'https://ithub-backend.onrender.com/api/auth/profile/update-profile',
         {
@@ -148,14 +145,19 @@ export default function ProfileScreen() {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-
+  
       if (response.status === 200) {
-        setLocalUserData(prev => ({
-          ...prev,
-          name: response.data.user.name,
-          profilePic: response.data.user.profilePic,
-        }));
-
+        const updatedUserData = {
+          ...localUserData,
+          name: newName,
+          profilePic: newProfilePic?.uri || localUserData.profilePic,
+        };
+        setLocalUserData(updatedUserData);
+        
+        if (onUpdate && typeof onUpdate === 'function') {
+          await onUpdate();
+        }
+        
         Alert.alert('Success', 'Profile updated successfully');
       } else {
         Alert.alert('Error', response.data.message || 'Failed to update profile');
@@ -211,7 +213,6 @@ export default function ProfileScreen() {
             <TouchableOpacity
               onPress={() => {
                 setShowPasswordFields(false);
-                setError(null);
                 setCurrentPassword('');
                 setNewPassword('');
                 setConfirmPassword('');
@@ -247,303 +248,297 @@ export default function ProfileScreen() {
       )}
     </View>
   );
-
-  if (!localUserData) {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <Text>No user data available</Text>
-      </View>
-    );
-  }
-
   return (
-    <ScrollView style={styles.container} bounces={false}>
-      <LinearGradient
-        colors={['#2C3E50', '#3498DB', '#2980B9']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.headerGradient}
+    <SafeAreaView style={styles.container}>
+      <View style={styles.headerContainer}>
+        <TouchableOpacity onPress={onClose} style={styles.backButton}>
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#2C3E50" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Profile Settings</Text>
+        {!isEditing && (
+          <TouchableOpacity onPress={() => setIsEditing(true)}>
+            <MaterialCommunityIcons name="pencil" size={24} color="#2C3E50" />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <ScrollView 
+        ref={scrollViewRef}
+        style={styles.contentContainer}
+        keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.headerContent}>
-          <View style={styles.profilePicWrapper}>
-            <TouchableOpacity
-              onPress={isEditing ? handleImagePick : null}
-              style={styles.profilePicContainer}
-            >
-              {localUserData.profilePic || newProfilePic ? (
-                <Image
-                  source={{
-                    uri: newProfilePic ? newProfilePic.uri : localUserData.profilePic
-                  }}
-                  style={styles.profilePic}
-                />
-              ) : (
-                <MaterialCommunityIcons name="account-circle" size={132} color="white" />
-              )}
-              {isEditing && (
-                <View style={styles.editOverlay}>
-                  <MaterialCommunityIcons name="camera" size={28} color="white" />
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.headerName}>
+        <View style={styles.profileSection}>
+          <TouchableOpacity 
+            onPress={isEditing ? handleImagePick : null}
+            style={styles.profileImageContainer}
+          >
+            <Image
+              source={newProfilePic ? { uri: newProfilePic.uri } : { uri: localUserData.profilePic }}
+              style={styles.profileImage}
+            />
+            {isEditing && (
+              <View style={styles.editImageOverlay}>
+                <MaterialCommunityIcons name="camera" size={24} color="white" />
+              </View>
+            )}
+          </TouchableOpacity>
+          
+          <Text style={styles.nameText}>
             {isEditing ? newName : localUserData.name}
           </Text>
-          <View style={styles.roleContainer}>
-            <MaterialCommunityIcons name="badge-account" size={20} color="white" />
-            <Text style={styles.headerRole}>{localUserData.role}</Text>
-          </View>
+          <Text style={styles.roleText}>{localUserData.role}</Text>
         </View>
-      </LinearGradient>
 
-      <View style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Personal Information</Text>
+        <View style={styles.formContainer}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Full Name</Text>
             <TextInput
-              style={[styles.input, !isEditing && styles.disabledInput]}
+              style={[
+                styles.input, 
+                !isEditing && styles.disabledInput
+              ]}
               value={isEditing ? newName : localUserData.name}
               onChangeText={setNewName}
               editable={isEditing}
-              placeholder="Enter your name"
-              placeholderTextColor="#A0A0A0"
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email Address</Text>
+            <Text style={styles.label}>Email</Text>
             <TextInput
               style={[styles.input, styles.disabledInput]}
               value={localUserData.email}
               editable={false}
-              placeholder="Email"
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Role</Text>
-            <TextInput
-              style={[styles.input, styles.disabledInput]}
-              value={localUserData.role}
-              editable={false}
-              placeholder="Role"
-            />
-          </View>
-
-          {isEditing ? (
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
+          {isEditing && (
+            <View style={styles.actionButtonContainer}>
+              <TouchableOpacity 
+                style={styles.cancelButton} 
                 onPress={() => {
                   setIsEditing(false);
                   setNewName(localUserData.name);
-                  setNewProfilePic(null);
                 }}
-                style={[styles.button, styles.cancelButton]}
               >
-                <MaterialCommunityIcons name="close" size={20} color="white" style={styles.buttonIcon} />
                 <Text style={styles.buttonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
+              <TouchableOpacity 
+                style={styles.saveButton} 
                 onPress={handleSave}
-                style={[styles.button, styles.saveButton]}
                 disabled={isSaving}
               >
-                <MaterialCommunityIcons name="check" size={20} color="white" style={styles.buttonIcon} />
-                <Text style={styles.buttonText}>{isSaving ? 'Saving...' : 'Save'}</Text>
+                <Text style={styles.buttonText}>
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </Text>
               </TouchableOpacity>
             </View>
-          ) : (
-            <TouchableOpacity
-              onPress={() => setIsEditing(true)}
-              style={[styles.button, styles.editButton]}
-            >
-              <MaterialCommunityIcons name="account-edit" size={24} color="white" style={styles.buttonIcon} />
-              <Text style={styles.buttonText}>Edit Profile</Text>
-            </TouchableOpacity>
           )}
         </View>
 
-        {renderPasswordSection()}
+        <View style={styles.securityContainer}>
+          <Text style={styles.sectionTitle}>Security</Text>
+          <TouchableOpacity 
+            style={styles.securityButton} 
+            onPress={handleShowPasswordFields}
+          >
+            <MaterialCommunityIcons name="lock" size={24} color="#2C3E50" />
+            <Text style={styles.securityButtonText}>
+              {showPasswordFields ? 'Hide' : 'Change Password'}
+            </Text>
+          </TouchableOpacity>
+
+          {showPasswordFields && (
+            <View style={styles.passwordFieldsContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Current Password"
+                secureTextEntry
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="New Password"
+                secureTextEntry
+                value={newPassword}
+                onChangeText={setNewPassword}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Confirm New Password"
+                secureTextEntry
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+              />
+              <TouchableOpacity 
+                style={styles.updatePasswordButton}
+                onPress={handlePasswordReset}
+              >
+                <Text style={styles.buttonText}>Update Password</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
         <SuccessAlert
-      visible={showSuccessAlert}
-      message="Your password has been successfully changed. Please use your new password the next time you log in."
-      onClose={() => setShowSuccessAlert(false)}
-    />
-      </View>
-    </ScrollView>
+          visible={showSuccessAlert}
+          message="Your password has been successfully changed. Please use your new password the next time you log in."
+          onClose={() => setShowSuccessAlert(false)}
+        />
+      </ScrollView>
+    </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FF',
+    backgroundColor: '#F5F7FA',
   },
-  centered: {
-    justifyContent: 'center',
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  headerGradient: {
-    paddingTop: 60,
-    paddingBottom: 40,
-  },
-  headerContent: {
-    alignItems: 'center',
-  },
-  content: {
-    flex: 1,
-    backgroundColor: '#F8F9FF',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    marginTop: -20,
-    padding: 20,
-  },
-  section: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
     backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
     color: '#2C3E50',
-    marginBottom: 20,
   },
-  profilePicWrapper: {
-    padding: 3,
-    borderRadius: 75,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  backButton: {
+    padding: 10,
   },
-  profilePicContainer: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+  contentContainer: {
+    flex: 1,
+    backgroundColor: '#F5F7FA',
+  },
+  profileSection: {
+    alignItems: 'center',
+    backgroundColor: 'white',
+    paddingVertical: 30,
+    marginBottom: 15,
+  },
+  profileImageContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     overflow: 'hidden',
-    borderWidth: 4,
-    borderColor: 'white',
+    borderWidth: 3,
+    borderColor: '#3498DB',
   },
-  profilePic: {
+  profileImage: {
     width: '100%',
     height: '100%',
   },
-  editOverlay: {
+  editImageOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    height: 45,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
+    padding: 10,
   },
-  headerName: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: 'white',
-    marginTop: 15,
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+  nameText: {
+    fontSize: 22,
+    fontWeight: '700',
+    marginTop: 10,
+    color: '#2C3E50',
   },
-  roleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginTop: 8,
-  },
-  headerRole: {
+  roleText: {
     fontSize: 16,
-    color: 'white',
-    marginLeft: 6,
+    color: '#7F8C8D',
+  },
+  formContainer: {
+    backgroundColor: 'white',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    marginBottom: 15,
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: 15,
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
     color: '#2C3E50',
-    marginBottom: 8,
-    marginLeft: 4,
+    marginBottom: 5,
   },
   input: {
-    backgroundColor: 'white',
-    borderRadius: 18,
-    padding: 15,
-    fontSize: 16,
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    marginBottom: 10,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 5,
+   
   },
   disabledInput: {
-    backgroundColor: '#F5F6FF',
-    color: '#666',
+    backgroundColor: '#F5F5F5',
+    color: '#7F8C8D',
   },
-  buttonContainer: {
+  actionButtonContainer: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 20,
-  },
-  button: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 15,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 4,
-  },
-  buttonIcon: {
-    marginRight: 8,
-  },
-  saveButton: {
-    backgroundColor: '#3498DB',
-  },
-  editButton: {
-    backgroundColor: '#3498DB',
-    marginTop: 10,
+    justifyContent: 'space-between',
+    marginTop: 15,
   },
   cancelButton: {
+    flex: 1,
     backgroundColor: '#E74C3C',
+    padding: 15,
+    borderRadius: 8,
+    marginRight: 10,
+    alignItems: 'center',
   },
-  securityButton: {
-    backgroundColor: '#2C3E50',
+  saveButton: {
+    flex: 1,
+    backgroundColor: '#3498DB',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
   },
   buttonText: {
     color: 'white',
-    fontSize: 16,
     fontWeight: '600',
   },
-  errorText: {
-    color: '#E74C3C',
-    marginTop: 8,
-    marginBottom: 8,
-    fontSize: 14,
+  securityContainer: {
+    backgroundColor: 'white',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
   },
-  disabledButton: {
-    opacity: 0.7,
-    backgroundColor: '#95A5A6',
-  }
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2C3E50',
+    marginBottom: 15,
+  },
+  securityButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F7FA',
+    padding: 15,
+    borderRadius: 8,
+  },
+  securityButtonText: {
+    marginLeft: 10,
+    fontSize: 16,
+    color: '#2C3E50',
+  },
+  passwordFieldsContainer: {
+    marginTop: 15,
+  },
+  updatePasswordButton: {
+    backgroundColor: '#2C3E50',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 15,
+  },
 });
+
+export default Profile;

@@ -9,8 +9,10 @@ import {
   Animated,
   ActivityIndicator,
   Share,
+  Alert,
+  Modal
 } from "react-native";
-import { TabView, SceneMap, TabBar } from "react-native-tab-view";
+import { TabView, TabBar } from "react-native-tab-view";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useNavigation } from "expo-router";
@@ -19,7 +21,10 @@ import CompanyInfo from "../../components/CompanyDetails/CompanyInfo";
 import JobPostings from "../../components/CompanyDetails/JobPostings";
 import Reviews from "../../components/CompanyDetails/Reviews";
 import Gallery from "../../components/CompanyDetails/Gallery";
-import axios from 'axios';
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+
 
 const initialLayout = { width: Dimensions.get("window").width };
 const HEADER_MAX_HEIGHT = 250;
@@ -41,48 +46,99 @@ export default function CompanyDetailScreen() {
 
   const [companyDetails, setCompanyDetails] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isSaved, setIsSaved] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
+  const fetchCompanyDetails = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(
+        `https://ithub-backend.onrender.com/api/companies/companydetails/${companyId}`
+      );
+      setCompanyDetails(response.data);
+    } catch (error) {
+      console.error("Error fetching company details:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const checkIfSaved = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const response = await axios.get(
+        `https://ithub-backend.onrender.com/api/companies/saved-company/${companyId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      setIsSaved(response.data.isSaved);
+    } catch (error) {
+      console.error("Error checking saved status:", error);
+    }
+  };
+
   useEffect(() => {
-    navigation.setOptions({
-      headerShown: true,
-      headerTransparent: true,
-      headerTitle: "",
-    });
-
-    const fetchCompanyDetails = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get(
-          `https://ithub-backend.onrender.com/api/companies/companydetails/${companyId}`
-        );
-        setCompanyDetails(response.data);
-       
-   
-      } catch (error) {
-        console.error("Error fetching company details:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchCompanyDetails();
+    checkIfSaved();
   }, [companyId]);
 
   const handleShare = async () => {
     try {
       await Share.share({
         message: `Check out ${companyDetails.name} on our app!`,
+        title: `${companyDetails.name} on ITHub`,
       });
     } catch (error) {
       console.error("Error sharing company details:", error);
+      Alert.alert("Error", "Failed to share company details");
     }
   };
 
-  const handleSave = () => {
-    // Implement save functionality (e.g., save to local storage or database)
-    console.log("Company saved:", companyDetails.name);
+  const handleSave = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (isSaved) {
+        await axios.delete(
+          `https://ithub-backend.onrender.com/api/companies/saved-companies/${companyId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        setIsSaved(false);
+        setModalMessage("Company removed from saved");
+      } else {
+        await axios.post(
+          "https://ithub-backend.onrender.com/api/companies/save-company",
+          {
+            companyId,
+            savedAt: new Date(),
+            companyName: companyDetails.name,
+            companyLogo: companyDetails.logo,
+            companyLocation: companyDetails.location,
+            companyEmployees: companyDetails.employees,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        setIsSaved(true);
+        setModalMessage("Company saved successfully");
+      }
+      setShowModal(true); // Show the success modal
+    } catch (error) {
+      console.error("Error saving company:", error);
+      Alert.alert("Error", "Failed to update saved companies");
+    }
   };
 
   const headerHeight = scrollY.interpolate({
@@ -178,7 +234,10 @@ export default function CompanyDetailScreen() {
             <Image source={{ uri: logo }} style={styles.companyLogo} />
           </View>
           <Animated.Text
-            style={[styles.companyTitle, { transform: [{ scale: titleScale }] }]}
+            style={[
+              styles.companyTitle,
+              { transform: [{ scale: titleScale }] },
+            ]}
           >
             {name}
           </Animated.Text>
@@ -190,11 +249,23 @@ export default function CompanyDetailScreen() {
         </View>
 
         <View style={styles.headerActions}>
-          <TouchableOpacity onPress={handleShare} style={styles.actionButton}>
-            <MaterialIcons name="share" size={28} color="#fff" />
+          <TouchableOpacity
+            onPress={handleShare}
+            style={styles.actionButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <MaterialIcons name="share" size={24} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleSave} style={styles.actionButton}>
-            <MaterialIcons name="bookmark" size={28} color="#fff" />
+          <TouchableOpacity
+            onPress={handleSave}
+            style={styles.actionButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <MaterialIcons
+              name={isSaved ? "bookmark" : "bookmark-border"}
+              size={24}
+              color="#fff"
+            />
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -206,6 +277,30 @@ export default function CompanyDetailScreen() {
         initialLayout={initialLayout}
         renderTabBar={renderTabBar}
       />
+       <Modal
+        visible={showModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowModal(false)}
+      >
+        <View style={styles.modalBackground}>
+          <View style={styles.modalContainer}>
+            <MaterialCommunityIcons
+              name="check-circle"
+              size={64}
+              color="#27AE60"
+            />
+            <Text style={styles.modalTitle}>Success</Text>
+            <Text style={styles.modalMessage}>{modalMessage}</Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => setShowModal(false)}
+            >
+              <Text style={styles.modalButtonText}>Okay</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -281,7 +376,7 @@ const styles = StyleSheet.create({
   },
   headerActions: {
     position: "absolute",
-    top: 50,
+    top: 80,
     right: 20,
     flexDirection: "row",
   },
@@ -319,5 +414,57 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: "red",
   },
+  saveButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F4F6F9",
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#3498DB",
+  },
+  saveButtonText: {
+    marginLeft: 8,
+    fontSize: 16,
+    color: "#3498DB",
+    fontWeight: "600",
+  },
+  modalBackground: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalContainer: {
+    backgroundColor: "white",
+    borderRadius: 10,
+    padding: 20,
+    width: "80%",
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#2C3E50",
+    marginVertical: 10,
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: "#7F8C8D",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  modalButton: {
+    backgroundColor: "#27AE60",
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  modalButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+  },
 });
-

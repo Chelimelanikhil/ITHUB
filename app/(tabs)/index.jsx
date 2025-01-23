@@ -20,6 +20,8 @@ import { useRouter } from "expo-router";
 import { useNavigation } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
+import Profile from "../../components/Profile/Profile";
+import SavedJobs from "../../components/saved/SavedJobs";
 
 const { width } = Dimensions.get("window");
 const AnimatedTouchableOpacity =
@@ -39,6 +41,8 @@ export default function IndexScreen() {
   const sidebarAnimation = useRef(new Animated.Value(-300)).current;
   const sidebarTranslateX = useRef(new Animated.Value(-width)).current;
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
+  const [isProfileVisible, setIsProfileVisible] = useState(false);
+  const [isSavedCompanyVisible, setIsSaveCompany] = useState(false);
 
   const overlayOpacity = useRef(new Animated.Value(0)).current;
 
@@ -88,11 +92,6 @@ export default function IndexScreen() {
     });
   }, []);
 
-  const parentcallback = async () => {
-    // Refetch the entire company data when a new job is added
-    await fetchUserData();
-  };
-
   const handleLogout = async () => {
     try {
       // Clear the user token from AsyncStorage
@@ -108,6 +107,7 @@ export default function IndexScreen() {
       //ToastAndroid.show('Error logging out. Please try again.', ToastAndroid.LONG);
     }
   };
+
   const toggleSidebar = () => {
     const toValue = isSidebarVisible ? -width : 0;
     const overlayToValue = isSidebarVisible ? 0 : 0.5;
@@ -128,29 +128,29 @@ export default function IndexScreen() {
 
     setIsSidebarVisible(!isSidebarVisible);
   };
+
   const handleProfileNavigation = () => {
-    // Close the sidebar
-    toggleSidebar();
-
-    // Extract only the necessary user data
-    const userDataForProfile = {
-      name: userData.name || "",
-      email: userData.email || "",
-      role: userData.role || "",
-      profilePic: userData.profilePic || "",
-      // Add any other required fields
-    };
-
-    router.push({
-      pathname: "/profile/profile",
-      params: {
-        name: userDataForProfile.name,
-        email: userDataForProfile.email,
-        role: userDataForProfile.role,
-        profilePic: userDataForProfile.profilePic,
-      },
-    });
+    setIsProfileVisible(true);
   };
+
+  const handleProfileUpdate = () => {
+    fetchUserData();
+  };
+
+  const handleProfileClose = () => {
+    toggleSidebar();
+    setIsProfileVisible(false);
+  };
+
+  const handleCompaniesNavigation = () => {
+    setIsSaveCompany(true);
+  };
+
+  const handleSaveJObsClose = () => {
+    toggleSidebar();
+    setIsSaveCompany(false);
+  };
+
   const renderSidebar = () => (
     <>
       <Animated.View
@@ -235,13 +235,16 @@ export default function IndexScreen() {
               <Text style={styles.sidebarItemText}>My Applications</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.sidebarItem}>
+            <TouchableOpacity
+              style={styles.sidebarItem}
+              onPress={handleCompaniesNavigation}
+            >
               <MaterialCommunityIcons
                 name="bookmark-outline"
                 size={24}
                 color="#fff"
               />
-              <Text style={styles.sidebarItemText}>Saved Jobs</Text>
+              <Text style={styles.sidebarItemText}>Saved Companies</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.sidebarItem}>
@@ -330,7 +333,7 @@ export default function IndexScreen() {
         ]}
       >
         <LinearGradient
-          colors={["#ffffff", "#f8f9fa"]}
+          colors={["#f0f4f8", "#ffffff"]}
           style={styles.cardGradient}
         >
           <View style={styles.companyHeader}>
@@ -369,13 +372,25 @@ export default function IndexScreen() {
               <Text style={styles.statText}>{item.rating} rating</Text>
             </View>
 
-            <View style={styles.openingsContainer}>
-              <MaterialCommunityIcons
-                name="briefcase"
-                size={18}
-                color="#4CAF50"
-              />
-              <Text style={styles.openingsText}>1 positions</Text>
+            <View
+              style={[
+                styles.openingsContainer,
+                {
+                  opacity: item.openings > 0 ? 1 : 0,
+                  width: item.openings > 0 ? "auto" : 50,
+                },
+              ]}
+            >
+              {item.openings > 0 && (
+                <>
+                  <MaterialCommunityIcons
+                    name="briefcase"
+                    size={18}
+                    color="#4CAF50"
+                  />
+                  <Text style={styles.openingsText}>{item.openings}</Text>
+                </>
+              )}
             </View>
           </View>
         </LinearGradient>
@@ -396,181 +411,205 @@ export default function IndexScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.headerContent}>
-        <TouchableOpacity onPress={toggleSidebar} style={styles.profileButton}>
-          <Image
-            source={{
-              uri:
-                userData.profilePic ||
-                "https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?semt=ais_hybrid",
-            }}
-            style={styles.profileImage}
-          />
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.welcomeText}>Welcome back</Text>
-            <Text style={styles.profileName}>{userData.name}</Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.notificationButton}>
-          <MaterialCommunityIcons
-            name="bell-outline"
-            size={28}
-            color="#2C3E50"
-          />
-
-          <View style={styles.notificationBadge}>
-            <Text style={styles.badgeText}>3</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
-
-      {sidebarVisible && (
-        <TouchableWithoutFeedback onPress={toggleSidebar}>
-          <View style={styles.sidebarOverlay}>
-            <TouchableWithoutFeedback>
-              <Animated.View
-                style={[
-                  styles.sidebarContent,
-                  { transform: [{ translateX: sidebarAnimation }] },
-                ]}
-              >
-                <TouchableOpacity
-                  onPress={toggleSidebar}
-                  style={styles.closeButton}
-                >
-                  <MaterialCommunityIcons name="close" size={28} color="#fff" />
-                </TouchableOpacity>
-
-                {/* Profile Image */}
-                <View style={styles.profileSection}>
-                  <Image
-                    source={{
-                      uri:
-                        userData.profilePic ||
-                        "https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?semt=ais_hybrid",
-                    }}
-                    style={styles.profilePic}
-                  />
-                  <Text style={styles.sidebarProfileName}>{userData.name}</Text>
-                  <Text style={styles.sidebarProfileEmail}>
-                    {userData.email}
-                  </Text>
-                </View>
-
-                {/* Sidebar Options */}
-                <View style={styles.sidebarOptions}>
-                  <TouchableOpacity style={styles.sidebarOption}>
-                    <MaterialCommunityIcons
-                      name="account-edit"
-                      size={24}
-                      color="#007AFF"
-                    />
-                    <Text style={styles.sidebarOptionText}>Edit Profile</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.sidebarOption}>
-                    <MaterialCommunityIcons
-                      name="cog"
-                      size={24}
-                      color="#007AFF"
-                    />
-                    <Text style={styles.sidebarOptionText}>Settings</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.sidebarOption}>
-                    <MaterialCommunityIcons
-                      name="help-circle"
-                      size={24}
-                      color="#007AFF"
-                    />
-                    <Text style={styles.sidebarOptionText}>Help</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Logout Button at Bottom */}
-                <View style={styles.logoutContainer}>
-                  <TouchableOpacity
-                    style={styles.logoutButton}
-                    onPress={handleLogout}
-                  >
-                    <MaterialCommunityIcons
-                      name="logout"
-                      size={24}
-                      color="#fff"
-                    />
-                    <Text style={styles.logoutText}>Log Out</Text>
-                  </TouchableOpacity>
-                </View>
-              </Animated.View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      )}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <MaterialCommunityIcons name="magnify" size={24} color="#666" />
-          <TextInput
-            value={searchQuery}
-            onChangeText={handleSearch}
-            placeholder="Search companies..."
-            placeholderTextColor="#666"
-            style={styles.searchInput}
-          />
-        </View>
-      </View>
-
-      <View style={styles.filterContainer}>
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={filters}
-          keyExtractor={(item) => item}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.filterButton,
-                selectedFilter === item && styles.filterButtonActive,
-              ]}
-              onPress={() => handleFilterSelect(item)}
-            >
-              <Text
-                style={[
-                  styles.filterText,
-                  selectedFilter === item && styles.filterTextActive,
-                ]}
-              >
-                {item}
-              </Text>
-            </TouchableOpacity>
-          )}
-          contentContainerStyle={styles.filterList}
+      {isProfileVisible ? (
+        <Profile
+          userData={userData}
+          onClose={handleProfileClose}
+          onUpdate={handleProfileUpdate}
         />
-      </View>
+      ) : isSavedCompanyVisible ? (
+        // Add your SaveJobs component here
+        <SavedJobs onClose={handleSaveJObsClose} />
+      ) : (
+        <>
+          <View style={styles.headerContent}>
+            <TouchableOpacity
+              onPress={toggleSidebar}
+              style={styles.profileButton}
+            >
+              <Image
+                source={{
+                  uri:
+                    userData.profilePic ||
+                    "https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?semt=ais_hybrid",
+                }}
+                style={styles.profileImage}
+              />
+              <View style={styles.headerTextContainer}>
+                <Text style={styles.welcomeText}>Welcome back</Text>
+                <Text style={styles.profileName}>{userData.name}</Text>
+              </View>
+            </TouchableOpacity>
 
-      <Animated.FlatList
-        data={filteredData}
-        keyExtractor={(item) => item._id.toString()} // Ensure `_id` is unique for each item
-        renderItem={renderCompanyItem}
-        contentContainerStyle={styles.listContainer}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true }
-        )}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={() => (
-          <View style={styles.emptyContainer}>
-            <MaterialCommunityIcons
-              name="alert-circle-outline"
-              size={48}
-              color="#666"
-            />
-            <Text style={styles.emptyText}>No companies found</Text>
-            <Text style={styles.emptySubtext}>
-              Try adjusting your search or filters
-            </Text>
+            <TouchableOpacity style={styles.notificationButton}>
+              <MaterialCommunityIcons
+                name="bell-outline"
+                size={28}
+                color="#2C3E50"
+              />
+
+              <View style={styles.notificationBadge}>
+                <Text style={styles.badgeText}>3</Text>
+              </View>
+            </TouchableOpacity>
           </View>
-        )}
-      />
-      {renderSidebar()}
+
+          {sidebarVisible && (
+            <TouchableWithoutFeedback onPress={toggleSidebar}>
+              <View style={styles.sidebarOverlay}>
+                <TouchableWithoutFeedback>
+                  <Animated.View
+                    style={[
+                      styles.sidebarContent,
+                      { transform: [{ translateX: sidebarAnimation }] },
+                    ]}
+                  >
+                    <TouchableOpacity
+                      onPress={toggleSidebar}
+                      style={styles.closeButton}
+                    >
+                      <MaterialCommunityIcons
+                        name="close"
+                        size={28}
+                        color="#fff"
+                      />
+                    </TouchableOpacity>
+
+                    {/* Profile Image */}
+                    <View style={styles.profileSection}>
+                      <Image
+                        source={{
+                          uri:
+                            userData.profilePic ||
+                            "https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?semt=ais_hybrid",
+                        }}
+                        style={styles.profilePic}
+                      />
+                      <Text style={styles.sidebarProfileName}>
+                        {userData.name}
+                      </Text>
+                      <Text style={styles.sidebarProfileEmail}>
+                        {userData.email}
+                      </Text>
+                    </View>
+
+                    {/* Sidebar Options */}
+                    <View style={styles.sidebarOptions}>
+                      <TouchableOpacity style={styles.sidebarOption}>
+                        <MaterialCommunityIcons
+                          name="account-edit"
+                          size={24}
+                          color="#007AFF"
+                        />
+                        <Text style={styles.sidebarOptionText}>
+                          Edit Profile
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.sidebarOption}>
+                        <MaterialCommunityIcons
+                          name="cog"
+                          size={24}
+                          color="#007AFF"
+                        />
+                        <Text style={styles.sidebarOptionText}>Settings</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.sidebarOption}>
+                        <MaterialCommunityIcons
+                          name="help-circle"
+                          size={24}
+                          color="#007AFF"
+                        />
+                        <Text style={styles.sidebarOptionText}>Help</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Logout Button at Bottom */}
+                    <View style={styles.logoutContainer}>
+                      <TouchableOpacity
+                        style={styles.logoutButton}
+                        onPress={handleLogout}
+                      >
+                        <MaterialCommunityIcons
+                          name="logout"
+                          size={24}
+                          color="#fff"
+                        />
+                        <Text style={styles.logoutText}>Log Out</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </Animated.View>
+                </TouchableWithoutFeedback>
+              </View>
+            </TouchableWithoutFeedback>
+          )}
+          <View style={styles.searchContainer}>
+            <View style={styles.searchBar}>
+              <MaterialCommunityIcons name="magnify" size={24} color="#666" />
+              <TextInput
+                value={searchQuery}
+                onChangeText={handleSearch}
+                placeholder="Search companies..."
+                placeholderTextColor="#666"
+                style={styles.searchInput}
+              />
+            </View>
+          </View>
+
+          <View style={styles.filterContainer}>
+            <FlatList
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              data={filters}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.filterButton,
+                    selectedFilter === item && styles.filterButtonActive,
+                  ]}
+                  onPress={() => handleFilterSelect(item)}
+                >
+                  <Text
+                    style={[
+                      styles.filterText,
+                      selectedFilter === item && styles.filterTextActive,
+                    ]}
+                  >
+                    {item}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              contentContainerStyle={styles.filterList}
+            />
+          </View>
+
+          <Animated.FlatList
+            data={filteredData}
+            keyExtractor={(item) => item._id.toString()} // Ensure `_id` is unique for each item
+            renderItem={renderCompanyItem}
+            contentContainerStyle={styles.listContainer}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+              { useNativeDriver: true }
+            )}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={() => (
+              <View style={styles.emptyContainer}>
+                <MaterialCommunityIcons
+                  name="alert-circle-outline"
+                  size={48}
+                  color="#666"
+                />
+                <Text style={styles.emptyText}>No companies found</Text>
+                <Text style={styles.emptySubtext}>
+                  Try adjusting your search or filters
+                </Text>
+              </View>
+            )}
+          />
+          {renderSidebar()}
+        </>
+      )}
     </SafeAreaView>
   );
 }
@@ -588,16 +627,17 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    marginBottom: 15,
   },
   profileButton: {
     flexDirection: "row",
     alignItems: "center",
   },
   profileImage: {
-    width: 55,
+    width: 45,
     height: 45,
     marginRight: 12,
+    borderRadius: 45,
   },
   headerTextContainer: {
     justifyContent: "center",

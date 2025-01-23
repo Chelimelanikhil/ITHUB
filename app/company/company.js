@@ -38,7 +38,7 @@ const CompanyProfile = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       setCompanyData(response.data);
-    
+
       setEditableData(response.data);
     } catch (error) {
       await AsyncStorage.removeItem('token');
@@ -69,14 +69,14 @@ const CompanyProfile = () => {
 
     switch (activeSection) {
       case 'about':
-        return <AboutSection 
-          companyData={companyData} 
+        return <AboutSection
+          companyData={companyData}
           editableData={editableData}
           setCompanyData={setCompanyData}
           setEditableData={setEditableData}
         />;
       case 'jobs':
-        return <JobsSection 
+        return <JobsSection
           companyData={companyData}
           editableData={editableData}
           setEditableData={setEditableData}
@@ -84,14 +84,14 @@ const CompanyProfile = () => {
           isLoading={isLoading} // Pass loading state to disable interactions
         />;
       case 'gallery':
-        return <GallerySection 
+        return <GallerySection
           companyData={companyData}
           editableData={editableData}
           onImageAdded={childcallback}
           setEditableData={setEditableData}
         />;
       case 'reviews':
-        return <ReviewsSection 
+        return <ReviewsSection
           companyData={companyData}
           editableData={editableData}
           setEditableData={setEditableData}
@@ -104,14 +104,14 @@ const CompanyProfile = () => {
 
   return (
     <View style={styles.container}>
-      <CompanyHeader 
-        companyData={companyData} 
+      <CompanyHeader
+        companyData={companyData}
         onprofileupdate={childcallback}
-        router={router} 
+        router={router}
       />
-      <SectionNavigation 
-        activeSection={activeSection} 
-        setActiveSection={setActiveSection} 
+      <SectionNavigation
+        activeSection={activeSection}
+        setActiveSection={setActiveSection}
       />
       {renderContent()}
     </View>

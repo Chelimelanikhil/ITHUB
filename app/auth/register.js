@@ -17,6 +17,9 @@ export default function RegisterScreen() {
   const [isCompany, setIsCompany] = useState(false); // Track if the user is a company or not
   const [profilePic, setProfilePic] = useState(null);
   const navigation = useNavigation();
+  const [isPasswordVisible, setPasswordVisible] = useState(false);
+  const [isConfirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
+
 
   useEffect(() => {
     navigation.setOptions({
@@ -26,16 +29,30 @@ export default function RegisterScreen() {
     });
   }, []);
 
-  const handleRegister = async () => {
-    if (!name || !email || !password || !confirmPassword) {
-      ToastAndroid.show('Please fill in all fields', ToastAndroid.SHORT);
-      return;
-    }
 
+
+
+  const validateInputs = () => {
+    if (!name || !email || !password) {
+      ToastAndroid.show('Please fill in all fields.', ToastAndroid.SHORT);
+      return false;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      ToastAndroid.show('Please enter a valid email.', ToastAndroid.SHORT);
+      return false;
+    }
     if (password !== confirmPassword) {
       ToastAndroid.show('Passwords do not match', ToastAndroid.SHORT);
-      return;
+      return false;
     }
+
+    return true;
+  };
+  const handleRegister = async () => {
+
+    if (!validateInputs()) return;
+
 
     setIsLoading(true);
 
@@ -49,6 +66,7 @@ export default function RegisterScreen() {
       };
 
       const response = await axios.post('https://ithub-backend.onrender.com/api/auth/register', formData);
+
 
       if (response.data.message === 'User registered successfully') {
         await AsyncStorage.setItem('token', response.data.token);
@@ -133,10 +151,17 @@ export default function RegisterScreen() {
         <TextInput
           style={styles.input}
           placeholder="Password"
-          secureTextEntry
+          secureTextEntry={!isPasswordVisible} // Toggle based on visibility state
           value={password}
           onChangeText={setPassword}
         />
+        <TouchableOpacity onPress={() => setPasswordVisible(!isPasswordVisible)}>
+          <MaterialCommunityIcons
+            name={isPasswordVisible ? "eye-off" : "eye"}
+            size={24}
+            color="gray"
+          />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.inputContainer}>
@@ -144,10 +169,17 @@ export default function RegisterScreen() {
         <TextInput
           style={styles.input}
           placeholder="Confirm Password"
-          secureTextEntry
+          secureTextEntry={!isConfirmPasswordVisible} // Toggle based on visibility state
           value={confirmPassword}
           onChangeText={setConfirmPassword}
         />
+        <TouchableOpacity onPress={() => setConfirmPasswordVisible(!isConfirmPasswordVisible)}>
+          <MaterialCommunityIcons
+            name={isConfirmPasswordVisible ? "eye-off" : "eye"}
+            size={24}
+            color="gray"
+          />
+        </TouchableOpacity>
       </View>
 
       {/* Toggle for selecting Role */}
@@ -235,6 +267,7 @@ const styles = StyleSheet.create({
     color: '#007bff',
     fontSize: 16,
     marginBottom: 10,
+    textDecorationLine: 'underline',
   },
   toggleContainer: {
     flexDirection: 'row',

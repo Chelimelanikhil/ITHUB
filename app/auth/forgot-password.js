@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ToastAndroid } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ToastAndroid, SafeAreaView } from 'react-native';
 import axios from 'axios';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-
+import { Ionicons } from '@expo/vector-icons';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-const router = useRouter();
+  const router = useRouter();
+
+  const handleBack = () => {
+    router.back();
+  };
+
   const handlePasswordReset = async () => {
     if (!email) {
       ToastAndroid.show('Please enter your email address', ToastAndroid.SHORT);
@@ -17,16 +22,14 @@ const router = useRouter();
 
     setIsSubmitting(true);
     try {
-      // Call the backend API to request a password reset
       const response = await axios.post('https://ithub-backend.onrender.com/api/auth/forgot-password', { email });
-    
+
       if (response.status === 200) {
         ToastAndroid.show('Password Reset Code sent successfully', ToastAndroid.SHORT);
-        //router.replace('/auth/reset-password', { email });
         router.push({
-            pathname: "/auth/reset-password",
-            params: { email },
-          });
+          pathname: "/auth/reset-password",
+          params: { email },
+        });
       } else {
         ToastAndroid.show('Failed to send password reset email', ToastAndroid.SHORT);
       }
@@ -38,31 +41,66 @@ const router = useRouter();
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Forgot Password?</Text>
-      <Text style={styles.description}>Enter your email to receive a password reset Code.</Text>
-
-      <View style={styles.inputContainer}>
-        <MaterialCommunityIcons name="email" size={24} color="gray" style={styles.icon} />
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-        />
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#333" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Reset Password</Text>
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={handlePasswordReset} disabled={isSubmitting}>
-        <Text style={styles.buttonText}>
-          {isSubmitting ? 'Submitting...' : 'Send Reset Code'}
-        </Text>
-      </TouchableOpacity>
-    </View>
+      <View style={styles.container}>
+        <Text style={styles.title}>Forgot Password?</Text>
+        <Text style={styles.description}>Enter your email to receive a password reset Code.</Text>
+
+        <View style={styles.inputContainer}>
+          <MaterialCommunityIcons name="email" size={24} color="gray" style={styles.icon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            keyboardType="email-address"
+            value={email}
+            onChangeText={setEmail}
+          />
+        </View>
+
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handlePasswordReset}
+          disabled={isSubmitting}
+        >
+          <Text style={styles.buttonText}>
+            {isSubmitting ? 'Submitting...' : 'Send Reset Code'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    backgroundColor: '#fff',
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginLeft: 12,
+  },
   container: {
     flex: 1,
     justifyContent: 'center',

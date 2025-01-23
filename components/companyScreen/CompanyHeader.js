@@ -39,25 +39,25 @@ const CompanyHeader = ({ companyData, setCompanyData, router, onprofileupdate })
       // Get token from AsyncStorage
       const token = await AsyncStorage.getItem('token');
 
-        const response = await axios.post(
-                      'https://ithub-backend.onrender.com/api/companies/update-company-profile-pic',
-                      {
-                          companyId: companyData._id,
-                          image:uri
-                      },
-                      {
-                          headers: {
-                              Authorization: `Bearer ${token}`
-                          }
-                      }
-                  );
-                  if (response.status === 200) {
-                      if (onprofileupdate) {
-                        await onprofileupdate();
-                        Alert.alert('Success', 'Logo updated successfully!');
-                      }
-                    
-                  
+      const response = await axios.post(
+        'https://ithub-backend.onrender.com/api/companies/update-company-profile-pic',
+        {
+          companyId: companyData._id,
+          image: uri
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      if (response.status === 200) {
+        if (onprofileupdate) {
+          await onprofileupdate();
+          Alert.alert('Success', 'Logo updated successfully!');
+        }
+
+
       } else {
         throw new Error(response.data.message || 'Failed to upload image.');
       }
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   headerContainer: {
     backgroundColor: 'white',
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 30,
     paddingHorizontal: 15,
   },
   loadingContainer: {

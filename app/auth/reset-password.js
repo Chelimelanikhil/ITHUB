@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ToastAndroid } from 'react-native';
 import axios from 'axios';
 import { useRoute } from "@react-navigation/native";
@@ -7,11 +7,56 @@ import { useRouter } from 'expo-router';
 export default function ResetPasswordScreen() {
   const router = useRouter();
   const route = useRoute();
-  const { email } = route.params; // Get the email from navigation params
+  const { email } = route.params;
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [resetCode, setResetCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(30);
+  const timerIntervalRef = useRef(null);
+  const endTimeRef = useRef(Date.now() + 30000);
+
+  const startTimer = () => {
+    // Clear any existing interval
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
+
+    // Set up new timer
+    timerIntervalRef.current = setInterval(() => {
+      const remaining = Math.max(0, Math.ceil((endTimeRef.current - Date.now()) / 1000));
+      setTimeLeft(remaining);
+      
+      if (remaining === 0) {
+        clearInterval(timerIntervalRef.current);
+      }
+    }, 1000);
+  };
+
+  useEffect(() => {
+    startTimer();
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+    };
+  }, []); // Run once on mount
+
+  const handleResendCode = async () => {
+    if (timeLeft === 0) {
+      try {
+        const response = await axios.post('https://ithub-backend.onrender.com/api/auth/forgot-password', { email });
+        if (response.status === 200) {
+          ToastAndroid.show('Reset code sent again', ToastAndroid.SHORT);
+          endTimeRef.current = Date.now() + 30000;
+          setTimeLeft(30);
+          startTimer(); // Restart the timer
+        }
+      } catch (error) {
+        ToastAndroid.show('Failed to resend reset code', ToastAndroid.SHORT);
+      }
+    }
+  };
 
   const handlePasswordReset = async () => {
     if (!password || !confirmPassword || !resetCode) {
@@ -26,25 +71,22 @@ export default function ResetPasswordScreen() {
 
     setIsSubmitting(true);
     try {
-      // Call the backend API to reset the password
       const response = await axios.post('https://ithub-backend.onrender.com/api/auth/reset-password', {
-        email, // You can pass the email here since it's available
+        email,
         resetCode,
         newPassword: password,
       });
 
       if (response.status === 200) {
         ToastAndroid.show('Password reset successful', ToastAndroid.SHORT);
-        router.replace('/auth/login'); // Navigate to Login page after reset
+        router.replace('/auth/login');
       } else {
         ToastAndroid.show(response.data.message || 'Failed to reset password', ToastAndroid.SHORT);
       }
     } catch (error) {
       if (error.response) {
-        // Error from backend (e.g., invalid code, expired code)
         ToastAndroid.show(error.response.data.message || 'Error resetting password', ToastAndroid.SHORT);
       } else {
-        // Network or other unknown errors
         ToastAndroid.show('Network error. Please try again later.', ToastAndroid.SHORT);
       }
     } finally {
@@ -85,6 +127,13 @@ export default function ResetPasswordScreen() {
           value={resetCode}
           onChangeText={setResetCode}
         />
+        {timeLeft === 0 ? (
+          <TouchableOpacity onPress={handleResendCode}>
+            <Text style={styles.resendText}>Send Again</Text>
+          </TouchableOpacity>
+        ) : (
+          <Text style={styles.timerText}>Resend in {timeLeft}s</Text>
+        )}
       </View>
 
       <TouchableOpacity style={styles.button} onPress={handlePasswordReset} disabled={isSubmitting}>
@@ -132,6 +181,17 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: '#333',
+  },
+  timerText: {
+    fontSize: 14,
+    color: '#555',
+    marginLeft: 10,
+  },
+  resendText: {
+    fontSize: 14,
+    color: '#007bff',
+    marginLeft: 10,
+    fontWeight: 'bold',
   },
   button: {
     backgroundColor: '#007bff',

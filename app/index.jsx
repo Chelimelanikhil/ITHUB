@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+
 export default function LoginScreen() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(null); // Set as null initially
@@ -17,7 +18,7 @@ export default function LoginScreen() {
 
         if (token) {
           if (role === 'user') {
-            setIsAuthenticated('user'); // If role is 'user', authenticated as 'user'
+            setIsAuthenticated('user'); 
           } else if (role === 'company') {
             setIsAuthenticated('company'); // If role is 'company', authenticated as 'company'
           } else {
@@ -60,7 +61,7 @@ export default function LoginScreen() {
     );
   }
 
-  return <View style={styles.container} />; // Optionally render an empty view when navigation happens
+  return <View style={styles.container} />; 
 }
 
 const styles = StyleSheet.create({
